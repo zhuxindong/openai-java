@@ -106,11 +106,11 @@ public class OpenAiServiceImpl implements OpenAiService {
                     break;
                 // 默认
                 default:
-                    webSocketServer.sendMessage("未知的请求类型");
+                    webSocketServer.sendMessage("出错了：未知的请求类型");
             }
         } catch (Exception e){
             e.printStackTrace();
-            webSocketServer.sendMessage("请求ChatGPT服务异常，请稍后再试！");
+            webSocketServer.sendMessage("出错了：" + e.getMessage());
         }
     }
 
@@ -161,7 +161,7 @@ public class OpenAiServiceImpl implements OpenAiService {
                     .executeAsync();
         }catch (Exception e){
             e.printStackTrace();
-            webSocketServer.sendMessage("请求遇到了问题，请稍后再试");
+            webSocketServer.sendMessage("出错了：" + e.getMessage());
             return;
         }
 
@@ -171,6 +171,13 @@ public class OpenAiServiceImpl implements OpenAiService {
         boolean flag = false;
         while((line = reader.readLine()) != null){
             String msgResult = UnicodeUtil.toString(line);
+            log.info(msgResult);
+            // 正则匹配错误信息
+            if(msgResult.contains("\"error\":")){
+                reader.close();
+                throw new RuntimeException("请求ChatGPT官方服务出错，请稍后再试");
+            }
+            // 正则匹配结果
             Matcher m = Pattern.compile("\"content\":\"(.*?)\"").matcher(msgResult);
             if(m.find()) {
                 // 过滤开头多余\n
