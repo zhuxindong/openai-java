@@ -172,10 +172,11 @@ public class OpenAiServiceImpl implements OpenAiService {
         while((line = reader.readLine()) != null){
             String msgResult = UnicodeUtil.toString(line);
             // 正则匹配错误信息
-            if(msgResult.contains("\"error\":")){
-                reader.close();
-                throw new RuntimeException("请求ChatGPT官方服务出错，请稍后再试");
-            }
+            log.info(msgResult);
+            //if(msgResult.contains("\"error\":")){
+            //    reader.close();
+            //    throw new RuntimeException("请求ChatGPT官方服务出错，请稍后再试");
+            //}
             // 正则匹配结果
             Matcher m = Pattern.compile("\"content\":\"(.*?)\"").matcher(msgResult);
             if(m.find()) {
