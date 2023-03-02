@@ -16,7 +16,7 @@ openai:
   # 多个Key用,分割
   keys: ${KEYS:}
   # 综合问答API
-  openai_api: https://api.openai.com/v1/completions
+  openai_api: https://api.openai.com/v1/chat/completions
   # 图片问答API
   image_api: https://api.openai.com/v1/images/generations
   # 余额查询的API
