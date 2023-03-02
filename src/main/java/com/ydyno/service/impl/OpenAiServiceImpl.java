@@ -33,6 +33,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import java.io.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -132,14 +133,18 @@ public class OpenAiServiceImpl implements OpenAiService {
             text = openAiDto.getKeepText();
         }
 
-        Map<String, Object> params = MapUtil.ofEntries(
-                MapUtil.entry("prompt", text),
-                MapUtil.entry("max_tokens", maxTokens),
-                MapUtil.entry("stream", true),
-                MapUtil.entry("logprobs", 0),
-                MapUtil.entry("model", openAiConfig.getModel()),
-                MapUtil.entry("temperature", openAiConfig.getTemperature())
+        // 构建请求参数
+        Map<String, String> message = MapUtil.ofEntries(
+                MapUtil.entry("role", "user"),
+                MapUtil.entry("content", text)
         );
+        Map<String, Object> params = MapUtil.ofEntries(
+                MapUtil.entry("stream", true),
+                MapUtil.entry("max_tokens", maxTokens),
+                MapUtil.entry("model", openAiConfig.getModel()),
+                MapUtil.entry("temperature", openAiConfig.getTemperature()),
+                MapUtil.entry("messages", ListUtil.toList(message))
+                );
 
         // 如果是连续对话，添加stop参数
         if(openAiDto.getKeep() == 1){
@@ -165,19 +170,15 @@ public class OpenAiServiceImpl implements OpenAiService {
         BufferedReader reader = new BufferedReader(new InputStreamReader(result.bodyStream()));
         boolean flag = false;
         while((line = reader.readLine()) != null){
-            Pattern p = Pattern.compile("\"text\": \"(.*?)\"");
-            Matcher m = p.matcher(line);
+            String msgResult = UnicodeUtil.toString(line);
+            Matcher m = Pattern.compile("\"content\":\"(.*?)\"").matcher(msgResult);
             if(m.find()) {
-
                 // 过滤开头多余\n
                 if(!"\\n".equals(m.group(1)) && !flag) {
                     flag = true;
                 }
-
                 // 将\n和\t替换为html中的换行和制表
-                String data = UnicodeUtil.toString(m.group(1)).replace("\\n", "\n")
-                        .replace("\\t", "\t");
-
+                String data = m.group(1).replace("\\n", "\n").replace("\\t", "\t");
                 // 发送信息
                 if(flag) {
                     webSocketServer.sendMessage(data);

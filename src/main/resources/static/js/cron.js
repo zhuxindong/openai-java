@@ -4,8 +4,6 @@ const apiUrl = "/api/openai";
 const uuid = getUuid();
 let number = new Date().getSeconds();
 
-// 重连次数
-
 // WS连接地址
 const wsServer= (window.location.protocol+'//' + window.location.host + "/api/ws/" + uuid)
     .replace("http", "ws")
@@ -13,6 +11,7 @@ const wsServer= (window.location.protocol+'//' + window.location.host + "/api/ws
 
 //socket初始化
 let socket;
+// 重连次数
 let reconnectCount;
 webSocketInit();
 function webSocketInit() {
