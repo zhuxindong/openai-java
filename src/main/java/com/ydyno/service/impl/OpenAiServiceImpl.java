@@ -136,7 +136,10 @@ public class OpenAiServiceImpl implements OpenAiService {
                     }
                     String role = data[0];
                     String content = data[1];
-                    Map<String, String> userMessage = MapUtil.of(role, content);
+                    Map<String, String> userMessage = MapUtil.ofEntries(
+                            MapUtil.entry("role", role),
+                            MapUtil.entry("content", content)
+                    );
                     messages.add(userMessage);
                 }
             }
