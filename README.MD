@@ -16,11 +16,11 @@
 
 ### Docker一键运行项目
 
-docker镜像地址与教程：https://hub.docker.com/r/dqjdda/openai-java
+docker镜像地址与教程：https://hub.docker.com/r/zhuxindong/openai-java
 
 ```bash
 # 替换 KEYS 即可
-# 参数教程见：https://hub.docker.com/r/dqjdda/openai-java
+# 参数教程见：https://hub.docker.com/r/zhuxindong/openai-java
 docker run -d \
 --name openai --restart always \
 -p 18080:18080 \
