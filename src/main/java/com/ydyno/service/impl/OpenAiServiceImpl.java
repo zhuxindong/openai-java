@@ -177,6 +177,7 @@ public class OpenAiServiceImpl implements OpenAiService {
         BufferedReader reader = new BufferedReader(new InputStreamReader(result.bodyStream()));
         boolean flag = false;
         boolean printErrorMsg = false;
+        StringBuilder errMsg = new StringBuilder();
         while((line = reader.readLine()) != null){
             String msgResult = UnicodeUtil.toString(line);
             // 正则匹配错误信息
@@ -186,13 +187,15 @@ public class OpenAiServiceImpl implements OpenAiService {
             // 如果出错，打印错误信息
             if (printErrorMsg) {
                 log.error(msgResult);
+                errMsg.append(msgResult);
             }
             // 正则匹配结果
             Matcher m = Pattern.compile("\"content\":\"(.*?)\"").matcher(msgResult);
             if(m.find()) {
-                // 将\n和\t替换为html中的换行和制表
+                // 将\n和\t替换为html中的换行和制表，将\替换为"
                 String data = m.group(1).replace("\\n", "\n")
-                        .replace("\\t", "\t");
+                        .replace("\\t", "\t")
+                        .replace("\\", "\"");
                 // 过滤AI回复开头的换行
                 if(!data.matches("\\n+") && !flag) {
                     flag = true;
@@ -207,6 +210,10 @@ public class OpenAiServiceImpl implements OpenAiService {
         reader.close();
         // 如果出错，抛出异常
         if (printErrorMsg){
+            Matcher m = Pattern.compile("\"message\": \"(.*?)\"").matcher(errMsg.toString());
+            if (m.find()){
+                throw new RuntimeException(m.group(1));
+            }
             throw new RuntimeException("请求ChatGPT官方服务出错，请稍后再试");
         };
     }
