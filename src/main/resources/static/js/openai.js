@@ -1,5 +1,4 @@
 let keepText = "";
-let tempKeepText = "";
 const apiUrl = "/api/openai";
 const uuid = getUuid();
 let number = new Date().getSeconds();
@@ -45,7 +44,7 @@ function webSocketInit() {
             const contentHtml = $("#content" + number)
             const articleWrapper = $("#article-wrapper");
             if(id === "1"){
-                tempKeepText += msg.data;
+                keepText += msg.data;
                 contentHtml.removeClass("hide-class");
                 contentHtml.find("pre").html(contentHtml.find("pre").html() + msg.data);
             } else {
@@ -141,12 +140,11 @@ function createArticle(title) {
     const id = idVal.val()
 
     if(keepVal.val() === "1"){
-        keepText = tempKeepText + keepText;
-        tempKeepText = "Human:" + title + " AI:"
+        keepText += (keepText === "" ? "" : "\n") + "user:" + title + "・・assistant:"
     }
 
     const data = JSON.stringify({
-        text: title, id: id, apikey: apikey, keep: keepVal.val(), keepText: title + (keepText ? "\n" + keepText : ""),
+        text: title, id: id, apikey: apikey, keep: keepVal.val(), keepText: keepText,
     })
 
     const articleWrapper = $("#article-wrapper");
