@@ -176,7 +176,6 @@ public class OpenAiServiceImpl implements OpenAiService {
         boolean printErrorMsg = false;
         while((line = reader.readLine()) != null){
             String msgResult = UnicodeUtil.toString(line);
-            log.info(msgResult);
             // 正则匹配错误信息
             if(msgResult.contains("\"error\":")){
                 printErrorMsg = true;
