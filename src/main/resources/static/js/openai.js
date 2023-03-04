@@ -1,8 +1,8 @@
 let keepText = "";
-let tempKeepText = "";
 const apiUrl = "/api/openai";
 const uuid = getUuid();
 let number = new Date().getSeconds();
+const heartbeatMsg = "this is the heartbeat message"
 
 // WS连接地址
 const wsServer= (window.location.protocol+'//' + window.location.host + "/api/ws/" + uuid)
@@ -38,19 +38,22 @@ function webSocketInit() {
 
     //获得消息事件
     socket.onmessage = function (msg) {
-        const id = idVal.val()
-        const contentHtml = $("#content" + number)
-        const articleWrapper = $("#article-wrapper");
-        if(id === "1"){
-            tempKeepText += msg.data;
-            contentHtml.removeClass("hide-class");
-            contentHtml.find("pre").html(contentHtml.find("pre").html() + msg.data);
-        } else {
-            articleWrapper.append(
-                '<li class="article-content" id=content' + number + '><img src="' + msg.data + '" alt=""></li>'
-            );
+        // 过滤心跳信息
+        if (msg.data !== heartbeatMsg) {
+            const id = idVal.val()
+            const contentHtml = $("#content" + number)
+            const articleWrapper = $("#article-wrapper");
+            if(id === "1"){
+                keepText += msg.data;
+                contentHtml.removeClass("hide-class");
+                contentHtml.find("pre").html(contentHtml.find("pre").html() + msg.data);
+            } else {
+                articleWrapper.append(
+                    '<li class="article-content" id=content' + number + '><img src="' + msg.data + '" alt=""></li>'
+                );
+            }
+            $(".creating-loading").removeClass("isLoading");
         }
-        $(".creating-loading").removeClass("isLoading");
     };
 }
 
@@ -137,12 +140,11 @@ function createArticle(title) {
     const id = idVal.val()
 
     if(keepVal.val() === "1"){
-        keepText = tempKeepText + keepText;
-        tempKeepText = "Human:" + title + " AI:"
+        keepText += (keepText === "" ? "" : "\n") + "user:" + title + "・・assistant:"
     }
 
     const data = JSON.stringify({
-        text: title, id: id, apikey: apikey, keep: keepVal.val(), keepText: title + (keepText ? "\n" + keepText : ""),
+        text: title, id: id, apikey: apikey, keep: keepVal.val(), keepText: keepText,
     })
 
     const articleWrapper = $("#article-wrapper");

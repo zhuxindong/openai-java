@@ -15,7 +15,6 @@
  */
 package com.ydyno.service.impl;
 
-import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.text.UnicodeUtil;
 import cn.hutool.core.util.StrUtil;
@@ -118,39 +117,48 @@ public class OpenAiServiceImpl implements OpenAiService {
      * 文本问答
      *
      * @param maxTokens       最大字符数
-     * @param openAiDto       请求参数
+     * @param openAiRequest       请求参数
      * @param apikey          apikey
      * @param webSocketServer /
      */
-    private void textQuiz(Integer maxTokens, OpenAiRequest openAiDto, String apikey, WebSocketServer webSocketServer) throws Exception {
-        List<String> stopList = null;
-        // 获取本次的对话
-        String text = openAiDto.getText();
-        if(openAiDto.getKeep() == 1){
-            // 构建连续对话参数
-            stopList = ListUtil.toList("Human:","AI:");
-            // 保留上一次的对话
-            text = openAiDto.getKeepText();
+    private void textQuiz(Integer maxTokens, OpenAiRequest openAiRequest, String apikey, WebSocketServer webSocketServer) throws Exception {
+        // 构建对话参数
+        List<Map<String, String>> messages = new ArrayList<>();
+        // 如果是连续对话，逐条添加对话内容
+        if(openAiRequest.getKeep() == 1){
+            String[] keepTexts = openAiRequest.getKeepText().split("\n");
+            for(String keepText : keepTexts){
+                String[] split = keepText.split("・・");
+                for(String str : split){
+                    String[] data = str.split(":");
+                    if(data.length < 2){
+                        continue;
+                    }
+                    String role = data[0];
+                    String content = data[1];
+                    Map<String, String> userMessage = MapUtil.ofEntries(
+                            MapUtil.entry("role", role),
+                            MapUtil.entry("content", content)
+                    );
+                    messages.add(userMessage);
+                }
+            }
+        } else {
+            Map<String, String> userMessage = MapUtil.ofEntries(
+                    MapUtil.entry("role", "user"),
+                    MapUtil.entry("content", openAiRequest.getText())
+            );
+            messages.add(userMessage);
         }
 
         // 构建请求参数
-        Map<String, String> message = MapUtil.ofEntries(
-                MapUtil.entry("role", "user"),
-                MapUtil.entry("content", text)
-        );
         Map<String, Object> params = MapUtil.ofEntries(
                 MapUtil.entry("stream", true),
                 MapUtil.entry("max_tokens", maxTokens),
                 MapUtil.entry("model", openAiConfig.getModel()),
                 MapUtil.entry("temperature", openAiConfig.getTemperature()),
-                MapUtil.entry("messages", ListUtil.toList(message))
-                );
-
-        // 如果是连续对话，添加stop参数
-        if(openAiDto.getKeep() == 1){
-            params.put("stop", stopList);
-        }
-
+                MapUtil.entry("messages", messages)
+        );
         // 调用接口
         HttpResponse result;
         try {
@@ -164,12 +172,12 @@ public class OpenAiServiceImpl implements OpenAiService {
             webSocketServer.sendMessage("出错了：" + e.getMessage());
             return;
         }
-
         // 处理数据
         String line;
         BufferedReader reader = new BufferedReader(new InputStreamReader(result.bodyStream()));
         boolean flag = false;
         boolean printErrorMsg = false;
+        StringBuilder errMsg = new StringBuilder();
         while((line = reader.readLine()) != null){
             String msgResult = UnicodeUtil.toString(line);
             // 正则匹配错误信息
@@ -179,13 +187,15 @@ public class OpenAiServiceImpl implements OpenAiService {
             // 如果出错，打印错误信息
             if (printErrorMsg) {
                 log.error(msgResult);
+                errMsg.append(msgResult);
             }
             // 正则匹配结果
             Matcher m = Pattern.compile("\"content\":\"(.*?)\"").matcher(msgResult);
             if(m.find()) {
-                // 将\n和\t替换为html中的换行和制表
+                // 将\n和\t替换为html中的换行和制表，将\替换为"
                 String data = m.group(1).replace("\\n", "\n")
-                        .replace("\\t", "\t");
+                        .replace("\\t", "\t")
+                        .replace("\\", "\"");
                 // 过滤AI回复开头的换行
                 if(!data.matches("\\n+") && !flag) {
                     flag = true;
@@ -200,6 +210,10 @@ public class OpenAiServiceImpl implements OpenAiService {
         reader.close();
         // 如果出错，抛出异常
         if (printErrorMsg){
+            Matcher m = Pattern.compile("\"message\": \"(.*?)\"").matcher(errMsg.toString());
+            if (m.find()){
+                throw new RuntimeException(m.group(1));
+            }
             throw new RuntimeException("请求ChatGPT官方服务出错，请稍后再试");
         };
     }
